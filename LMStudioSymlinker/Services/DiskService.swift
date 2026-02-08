@@ -302,18 +302,19 @@ actor DiskService {
     private func runCommand(_ command: String, arguments: [String]) async -> String? {
         await withCheckedContinuation { continuation in
             let process = Process()
-            let pipe = Pipe()
+            let outPipe = Pipe()
+            let errPipe = Pipe()
 
             process.executableURL = URL(fileURLWithPath: command)
             process.arguments = arguments
-            process.standardOutput = pipe
-            process.standardError = pipe
+            process.standardOutput = outPipe
+            process.standardError = errPipe
 
             do {
                 try process.run()
                 process.waitUntilExit()
 
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let data = outPipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: data, encoding: .utf8)
                 continuation.resume(returning: output)
             } catch {
