@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug LMStudioSymlinker",
+      "program": "${workspaceFolder}/.build/debug/LMStudioSymlinker",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "swift: Build Debug LMStudioSymlinker"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug (no build)",
+      "program": "${workspaceFolder}/.build/debug/LMStudioSymlinker",
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Release LMStudioSymlinker",
+      "program": "${workspaceFolder}/.build/release/LMStudioSymlinker",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "swift: Build Release LMStudioSymlinker"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Release (no build)",
+      "program": "${workspaceFolder}/.build/release/LMStudioSymlinker",
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "attach",
+      "name": "Attach to LMStudioSymlinker",
+      "program": "${workspaceFolder}/.build/debug/LMStudioSymlinker",
+      "waitFor": true
+    }
+  ]
+}
