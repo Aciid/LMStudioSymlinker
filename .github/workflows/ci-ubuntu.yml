@@ -21,8 +21,8 @@ jobs:
 
       - name: Run smoketest (debug build)
         run: |
-          swift build
-          test -f .build/debug/LMStudioSymlinker || (echo "FAIL: Debug executable not found" && exit 1)
+          swift build --product LMStudioSymlinkerCLI
+          test -f .build/debug/LMStudioSymlinkerCLI || (echo "FAIL: Debug executable not found" && exit 1)
           echo "OK: Smoketest passed"
 
   package:
@@ -39,15 +39,15 @@ jobs:
 
       - name: Run full smoketest (release build)
         run: |
-          swift build -c release
-          test -f .build/release/LMStudioSymlinker || (echo "FAIL: Release executable not found" && exit 1)
+          swift build -c release --product LMStudioSymlinkerCLI
+          test -f .build/release/LMStudioSymlinkerCLI || (echo "FAIL: Release executable not found" && exit 1)
           echo "OK: Release build succeeded"
 
       - name: Zip Linux binary
         run: |
           mkdir -p build
-          cp .build/release/LMStudioSymlinker build/
-          cd build && zip -r LMStudioSymlinker-Linux.zip LMStudioSymlinker && cd ..
+          cp .build/release/LMStudioSymlinkerCLI build/
+          cd build && zip -r LMStudioSymlinker-Linux.zip LMStudioSymlinkerCLI && cd ..
 
       - name: Upload Linux binary artifact
         uses: actions/upload-artifact@v4
