@@ -73,7 +73,6 @@ You must pass `--product LMStudioSymlinkerCLI` because the default `swift build`
    Upload `build/LMStudioSymlinker-macOS.zip` as a release asset.
 
 3. **Create a GitHub Release**:
-
    - Repo → **Releases** → **Draft a new release**
    - Choose a tag (e.g. `v1.0.0`) and title
    - Add release notes, then attach `LMStudioSymlinker-macOS.zip`
@@ -104,4 +103,4 @@ After setup, use LM Studio as usual; it will read and write via the symlinks. Ej
 
 ## License
 
-See repository license file.
+[MIT](LICENSE). This project is not affiliated with [LM Studio](https://lmstudio.ai); LM Studio’s license is separate (see [lmstudio-ai/lms](https://github.com/lmstudio-ai/lms)).
