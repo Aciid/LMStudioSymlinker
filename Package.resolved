@@ -1,0 +1,24 @@
+{
+  "originHash" : "ca8fdc54dd3201ebcbc8f46bd08671d7011a56d7375f3421d884be10c54ee735",
+  "pins" : [
+    {
+      "identity" : "nolaunchwin",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/boybeak/NoLaunchWin.git",
+      "state" : {
+        "revision" : "8114836b96375ffe24740bd9c503ca1b0a57324d",
+        "version" : "0.0.1"
+      }
+    },
+    {
+      "identity" : "tray",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/boybeak/Tray.git",
+      "state" : {
+        "revision" : "657ef95df17c6e21b49002daeb04423580db3f2c",
+        "version" : "0.1.6"
+      }
+    }
+  ],
+  "version" : 3
+}

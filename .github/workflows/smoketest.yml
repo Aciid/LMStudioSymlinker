@@ -1,0 +1,38 @@
+name: Smoketest & Package
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  smoketest:
+    name: Smoketest
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run smoketest
+        run: zsh ./scripts/smoketest.zsh
+
+  package:
+    name: Package (.app)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run full smoketest (build + .app bundle)
+        run: zsh ./scripts/smoketest.zsh --full
+
+      - name: Zip app bundle
+        run: |
+          cd build && zip -r LMStudioSymlinker-macOS.zip LMStudioSymlinker.app && cd ..
+
+      - name: Upload macOS app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LMStudioSymlinker-macOS
+          path: build/LMStudioSymlinker-macOS.zip

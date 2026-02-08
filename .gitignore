@@ -1,0 +1,41 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Xcode
+DerivedData/
+*.xcuserstate
+*.xcworkspace
+!*.xcodeproj/project.xcworkspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.localized
+
+# Distribution build output
+build/
+
+# Build artifacts
+*.o
+*.a
+*.dylib
+*.framework
+*.app
+
+# Debug / profiling
+*.dSYM/
+*.gcda
+*.gcno
+*.sample
+
+# IDE / editors
+*.swp
+*.swo
+*~
+.idea/
+
+# Environment / config (uncomment if you use local overrides)
+# .env
+# .env.local
