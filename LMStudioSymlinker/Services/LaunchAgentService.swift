@@ -1,8 +1,9 @@
-// LaunchAgentService.swift
+// LaunchAgentService.swift - macOS LaunchAgents implementation of SystemServiceInstalling
 
 import Foundation
+import LMStudioSymlinkerCore
 
-actor LaunchAgentService {
+actor LaunchAgentService: SystemServiceInstalling {
     static let shared = LaunchAgentService()
 
     private let fileManager = FileManager.default
@@ -537,5 +538,23 @@ actor LaunchAgentService {
                 continuation.resume(returning: false)
             }
         }
+    }
+
+    // MARK: - SystemServiceInstalling
+
+    public func install(volumeUUID: String, volumePath: String) async throws {
+        try await installSystemService(volumeUUID: volumeUUID, volumePath: volumePath)
+    }
+
+    public func uninstall() async throws {
+        try await uninstallSystemService()
+    }
+
+    public func isInstalled() async -> Bool {
+        isServiceInstalled()
+    }
+
+    public func getStatus() async -> [String: Bool] {
+        await getServiceStatus()
     }
 }

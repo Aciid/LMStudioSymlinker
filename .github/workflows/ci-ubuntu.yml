@@ -1,0 +1,56 @@
+name: CI (Ubuntu)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  smoketest:
+    name: Smoketest (Ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '6.0'
+
+      - name: Run smoketest (debug build)
+        run: |
+          swift build
+          test -f .build/debug/LMStudioSymlinker || (echo "FAIL: Debug executable not found" && exit 1)
+          echo "OK: Smoketest passed"
+
+  package:
+    name: Package (Linux binary)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '6.0'
+
+      - name: Run full smoketest (release build)
+        run: |
+          swift build -c release
+          test -f .build/release/LMStudioSymlinker || (echo "FAIL: Release executable not found" && exit 1)
+          echo "OK: Release build succeeded"
+
+      - name: Zip Linux binary
+        run: |
+          mkdir -p build
+          cp .build/release/LMStudioSymlinker build/
+          cd build && zip -r LMStudioSymlinker-Linux.zip LMStudioSymlinker && cd ..
+
+      - name: Upload Linux binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LMStudioSymlinker-Linux
+          path: build/LMStudioSymlinker-Linux.zip

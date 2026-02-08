@@ -1,10 +1,11 @@
-// VolumeMonitorService.swift
+// VolumeMonitorService.swift - macOS DiskArbitration implementation of VolumeMonitoring
 
 import Foundation
 import DiskArbitration
+import LMStudioSymlinkerCore
 
 @MainActor
-final class VolumeMonitorService {
+final class VolumeMonitorService: VolumeMonitoring {
     static let shared = VolumeMonitorService()
 
     private var session: DASession?
