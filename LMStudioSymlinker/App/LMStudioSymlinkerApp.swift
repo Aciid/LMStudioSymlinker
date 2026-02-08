@@ -4,6 +4,7 @@ import SwiftUI
 import AppKit
 import Tray
 import NoLaunchWin
+import LMStudioSymlinkerCore
 
 extension Notification.Name {
     static let settingsWindowShouldBecomeKey = Notification.Name("settingsWindowShouldBecomeKey")
@@ -23,8 +24,21 @@ struct LMStudioSymlinkerApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var tray: Tray!
-    let settingsViewModel = SettingsViewModel()
+    let settingsViewModel: SettingsViewModel
     private var settingsWindow: NSWindow?
+    private let symlinkService: SymlinkService
+
+    override init() {
+        let driveProvider = DiskService.shared
+        self.symlinkService = SymlinkService(driveProvider: driveProvider)
+        self.settingsViewModel = SettingsViewModel(
+            config: ConfigurationService.shared,
+            driveProvider: driveProvider,
+            symlinkService: symlinkService,
+            systemService: LaunchAgentService.shared
+        )
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupTray()
@@ -145,13 +159,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Handle mount (nonisolated properties don't need await)
-        let diskService = DiskService.shared
-        let modelsPath = diskService.modelsSymlinkPath
-        let hubPath = diskService.hubSymlinkPath
+        let modelsPath = PathHelper.modelsSymlinkPath
+        let hubPath = PathHelper.hubSymlinkPath
 
         do {
-            try await SymlinkService.shared.handleVolumeMount(
+            try await symlinkService.handleVolumeMount(
                 volumeUUID: selectedDrive.uuid,
                 modelsSymlinkPath: modelsPath,
                 hubSymlinkPath: hubPath
@@ -167,12 +179,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Handle unmount (nonisolated properties don't need await)
-        let diskService = DiskService.shared
-        let modelsPath = diskService.modelsSymlinkPath
-        let hubPath = diskService.hubSymlinkPath
+        let modelsPath = PathHelper.modelsSymlinkPath
+        let hubPath = PathHelper.hubSymlinkPath
 
-        await SymlinkService.shared.handleVolumeUnmount(
+        await symlinkService.handleVolumeUnmount(
             modelsSymlinkPath: modelsPath,
             hubSymlinkPath: hubPath
         )

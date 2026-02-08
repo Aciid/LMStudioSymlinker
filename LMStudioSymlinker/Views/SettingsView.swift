@@ -1,6 +1,7 @@
 // SettingsView.swift
 
 import SwiftUI
+import LMStudioSymlinkerCore
 
 struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
@@ -496,7 +497,18 @@ struct ServiceStatusView: View {
 #if DEBUG
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
-        SettingsView(viewModel: SettingsViewModel())
+        SettingsView(viewModel: previewViewModel)
+    }
+
+    private static var previewViewModel: SettingsViewModel {
+        let driveProvider = DiskService.shared
+        let symlinkService = SymlinkService(driveProvider: driveProvider)
+        return SettingsViewModel(
+            config: ConfigurationService.shared,
+            driveProvider: driveProvider,
+            symlinkService: symlinkService,
+            systemService: LaunchAgentService.shared
+        )
     }
 }
 #endif

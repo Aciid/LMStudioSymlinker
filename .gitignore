@@ -2,6 +2,8 @@
 .build/
 .swiftpm/
 
+.claude/
+
 # Xcode
 DerivedData/
 *.xcuserstate

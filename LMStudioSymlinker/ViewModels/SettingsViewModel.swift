@@ -1,8 +1,9 @@
-// SettingsViewModel.swift
+// SettingsViewModel.swift - Uses protocol types from Core (shared with Linux CLI)
 
 import Foundation
 import SwiftUI
 import Combine
+import LMStudioSymlinkerCore
 
 @MainActor
 @Observable
@@ -31,12 +32,12 @@ final class SettingsViewModel {
 
     var startAtLogin = false
 
-    // MARK: - Services
+    // MARK: - Services (injected, protocol-based)
 
-    private let diskService = DiskService.shared
-    private let symlinkService = SymlinkService.shared
-    private let configService = ConfigurationService.shared
-    private let launchAgentService = LaunchAgentService.shared
+    private let config: ConfigStorage
+    private let driveProvider: DriveProviding
+    private let symlinkService: SymlinkService
+    private let systemService: SystemServiceInstalling
 
     // MARK: - Computed Properties
 
@@ -61,7 +62,11 @@ final class SettingsViewModel {
 
     // MARK: - Initialization
 
-    init() {
+    init(config: ConfigStorage, driveProvider: DriveProviding, symlinkService: SymlinkService, systemService: SystemServiceInstalling) {
+        self.config = config
+        self.driveProvider = driveProvider
+        self.symlinkService = symlinkService
+        self.systemService = systemService
         Task {
             await loadSavedConfiguration()
             await refreshDriveList()
@@ -75,13 +80,12 @@ final class SettingsViewModel {
     // MARK: - Configuration
 
     private func loadSavedConfiguration() async {
-        let config = await configService.loadConfiguration()
+        let loaded = await config.loadConfiguration()
 
-        if let path = config.externalDrivePath,
-           let uuid = config.externalDriveUUID,
-           let name = config.externalDriveName {
-            // Verify the drive is still valid
-            if let driveInfo = await diskService.getDriveInfo(for: path),
+        if let path = loaded.externalDrivePath,
+           let uuid = loaded.externalDriveUUID,
+           let name = loaded.externalDriveName {
+            if let driveInfo = await driveProvider.getDriveInfo(for: path),
                driveInfo.uuid == uuid {
                 selectedDrive = driveInfo
             } else {
@@ -95,19 +99,19 @@ final class SettingsViewModel {
             }
         }
 
-        if config.isInitialized {
+        if loaded.isInitialized {
             initializationState = .initialized
         }
     }
 
     private func saveConfiguration() async {
-        let config = AppConfiguration(
+        let toSave = AppConfiguration(
             externalDrivePath: selectedDrive?.path,
             externalDriveUUID: selectedDrive?.uuid,
             externalDriveName: selectedDrive?.name,
             isInitialized: initializationState == .initialized
         )
-        await configService.saveConfiguration(config)
+        await config.saveConfiguration(toSave)
     }
 
     // MARK: - Drive Management
@@ -117,7 +121,7 @@ final class SettingsViewModel {
         defer { isLoadingDrives = false }
 
         do {
-            availableDrives = try await diskService.getExternalDrives()
+            availableDrives = try await driveProvider.getExternalDrives()
         } catch {
             showError(message: "Failed to load drives: \(error.localizedDescription)")
         }
@@ -170,7 +174,7 @@ final class SettingsViewModel {
         }
 
         // Get drive info
-        guard let driveInfo = await diskService.getDriveInfo(for: path) else {
+        guard let driveInfo = await driveProvider.getDriveInfo(for: path) else {
             showError(message: "Could not get information for selected volume")
             return
         }
@@ -192,16 +196,15 @@ final class SettingsViewModel {
             return
         }
 
-        if let usage = await diskService.getStorageUsage(for: drive.path) {
+        if let usage = await driveProvider.getStorageUsage(for: drive.path) {
             targetDiskStorageUsage = usage
         }
 
-        // Check LM Studio models (nonisolated properties don't need await)
-        let modelsPath = diskService.modelsSymlinkPath
-        isLMStudioModelsExist = await diskService.lmStudioModelsExist()
+        let modelsPath = driveProvider.modelsSymlinkPath
+        isLMStudioModelsExist = await driveProvider.lmStudioModelsExist()
 
         if isLMStudioModelsExist {
-            if let usage = await diskService.getStorageUsage(for: modelsPath) {
+            if let usage = await driveProvider.getStorageUsage(for: modelsPath) {
                 lmStudioModelsUsage = usage
             }
         }
@@ -210,7 +213,7 @@ final class SettingsViewModel {
     // MARK: - Symlink Status
 
     private func checkSymlinkStatus() async {
-        symlinkStatus = await diskService.getSymlinkStatus()
+        symlinkStatus = await driveProvider.getSymlinkStatus()
         updateInitializationStateFromSymlinks()
     }
 
@@ -254,9 +257,8 @@ final class SettingsViewModel {
         progressMessage = "Starting initialization..."
 
         do {
-            // nonisolated properties don't need await
-            let modelsPath = diskService.modelsSymlinkPath
-            let hubPath = diskService.hubSymlinkPath
+            let modelsPath = driveProvider.modelsSymlinkPath
+            let hubPath = driveProvider.hubSymlinkPath
 
             try await symlinkService.initialize(
                 volumePath: drive.path,
@@ -294,7 +296,7 @@ final class SettingsViewModel {
         progressMessage = "Installing system service..."
 
         do {
-            try await launchAgentService.installSystemService(
+            try await systemService.install(
                 volumeUUID: drive.uuid,
                 volumePath: drive.path
             )
@@ -315,7 +317,7 @@ final class SettingsViewModel {
         progressMessage = "Uninstalling system service..."
 
         do {
-            try await launchAgentService.uninstallSystemService()
+            try await systemService.uninstall()
             isServiceInstalled = false
             serviceStatus = [:]
             progressMessage = "System service uninstalled!"
@@ -328,8 +330,8 @@ final class SettingsViewModel {
     }
 
     private func checkServiceStatus() async {
-        isServiceInstalled = await launchAgentService.isServiceInstalled()
-        serviceStatus = await launchAgentService.getServiceStatus()
+        isServiceInstalled = await systemService.isInstalled()
+        serviceStatus = await systemService.getStatus()
     }
 
     // MARK: - Login Item

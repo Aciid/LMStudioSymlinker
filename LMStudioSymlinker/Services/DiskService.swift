@@ -1,25 +1,26 @@
-// DiskService.swift
+// DiskService.swift - macOS implementation of DriveProviding
 
 import Foundation
 import DiskArbitration
+import LMStudioSymlinkerCore
 
-actor DiskService {
+actor DiskService: DriveProviding {
     static let shared = DiskService()
 
     private let fileManager = FileManager.default
 
-    // MARK: - LM Studio Paths
+    // MARK: - LM Studio Paths (DriveProviding)
 
     nonisolated var lmStudioBasePath: String {
-        NSHomeDirectory() + "/.lmstudio"
+        PathHelper.lmStudioBasePath
     }
 
     nonisolated var modelsSymlinkPath: String {
-        lmStudioBasePath + "/models"
+        PathHelper.modelsSymlinkPath
     }
 
     nonisolated var hubSymlinkPath: String {
-        lmStudioBasePath + "/hub"
+        PathHelper.hubSymlinkPath
     }
 
     // MARK: - Volume Detection
@@ -255,12 +256,15 @@ actor DiskService {
         return formatter.string(fromByteCount: bytes)
     }
 
-    // MARK: - Path Type Detection
+    // MARK: - Path Type Detection (DriveProviding)
 
-    func getPathType(for path: String) -> PathType {
+    func getPathType(for path: String) async -> PathType {
+        getPathTypeSync(for: path)
+    }
+
+    private func getPathTypeSync(for path: String) -> PathType {
         var isDirectory: ObjCBool = false
 
-        // Check if it's a symlink first
         if let attrs = try? fileManager.attributesOfItem(atPath: path),
            let type = attrs[.type] as? FileAttributeType,
            type == .typeSymbolicLink {
@@ -270,7 +274,6 @@ actor DiskService {
             return .symlink(target: "unknown")
         }
 
-        // Check if path exists
         if fileManager.fileExists(atPath: path, isDirectory: &isDirectory) {
             return isDirectory.boolValue ? .realDirectory : .file
         }
@@ -278,21 +281,21 @@ actor DiskService {
         return .doesNotExist
     }
 
-    func getSymlinkStatus() -> SymlinkStatus {
+    func getSymlinkStatus() async -> SymlinkStatus {
         SymlinkStatus(
-            modelsPathType: getPathType(for: modelsSymlinkPath),
-            hubPathType: getPathType(for: hubSymlinkPath)
+            modelsPathType: getPathTypeSync(for: modelsSymlinkPath),
+            hubPathType: getPathTypeSync(for: hubSymlinkPath)
         )
     }
 
-    // MARK: - LM Studio Models Path Check
+    // MARK: - LM Studio Models Path Check (DriveProviding)
 
-    func lmStudioModelsExist() -> Bool {
+    func lmStudioModelsExist() async -> Bool {
         var isDirectory: ObjCBool = false
         return fileManager.fileExists(atPath: modelsSymlinkPath, isDirectory: &isDirectory) && isDirectory.boolValue
     }
 
-    func lmStudioHubExists() -> Bool {
+    func lmStudioHubExists() async -> Bool {
         var isDirectory: ObjCBool = false
         return fileManager.fileExists(atPath: hubSymlinkPath, isDirectory: &isDirectory) && isDirectory.boolValue
     }

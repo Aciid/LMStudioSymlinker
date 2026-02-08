@@ -32,6 +32,28 @@ swift run LMStudioSymlinker
 
 The built executable is at `.build/debug/LMStudioSymlinker`. You can copy it to `/Applications` or another folder and run it from there.
 
+## Build on Ubuntu / Linux
+
+On Linux only the **CLI** is available (the menu bar app is macOS-only). Use Swift 6.x (e.g. from [swift.org](https://swift.org/download/) or your distro).
+
+```bash
+# From the project root (where Package.swift is)
+cd LMStudioSymlinker
+
+# Debug build
+swift build --product LMStudioSymlinkerCLI
+
+# Release build
+swift build -c release --product LMStudioSymlinkerCLI
+```
+
+- **Debug binary:** `.build/debug/LMStudioSymlinkerCLI`
+- **Release binary:** `.build/release/LMStudioSymlinkerCLI`
+
+Run with: `./.build/debug/LMStudioSymlinkerCLI` or `./.build/release/LMStudioSymlinkerCLI`.
+
+You must pass `--product LMStudioSymlinkerCLI` because the default `swift build` would try to build the macOS app, which fails on Linux (SwiftUI/AppKit and macOS-only dependencies).
+
 ## Creating a .app for distribution (e.g. GitHub)
 
 1. **Build the app bundle** (release binary + macOS app structure):
