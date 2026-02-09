@@ -46,6 +46,17 @@ struct SettingsView: View {
         } message: {
             Text(viewModel.errorMessage)
         }
+        .sheet(isPresented: $showOfflineModels) {
+            if let drivePath = viewModel.selectedDrive?.path {
+                OfflineModelsView(
+                    driveProvider: DiskService.shared,
+                    drivePath: drivePath
+                )
+            } else {
+                Text("Error: No drive selected")
+                    .padding()
+            }
+        }
     }
 
     // MARK: - Header
@@ -287,7 +298,21 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .buttonStyle(.borderedProminent)
             .disabled(!viewModel.canInitialize)
+
+            // Offline Models
+            if viewModel.initializationState == .initialized {
+                Button(action: {
+                   openOfflineModelsWindow()
+                }) {
+                    HStack {
+                        Image(systemName: "cube.box.fill")
+                        Text("Manage Offline Models")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
 
             // System Service description and button
             Text("The system service keeps LM Studio’s models and hub symlinks in sync with your external drive: it runs once at login, reacts when you plug or unplug the drive (via /Volumes), and keeps a background watcher. Logs are written to /tmp and rotated daily.")
@@ -336,6 +361,13 @@ struct SettingsView: View {
                 viewModel.handleStartAtLoginChange(newValue)
             }
         }
+    }
+    // MARK: - Navigation
+
+    @State private var showOfflineModels = false
+
+    private func openOfflineModelsWindow() {
+        showOfflineModels = true
     }
 }
 

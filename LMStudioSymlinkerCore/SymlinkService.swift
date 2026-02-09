@@ -102,8 +102,15 @@ public actor SymlinkService {
         case .realDirectory:
             progressHandler("Copying \(name) to external drive...")
             try await copyDirectory(from: symlinkPath, to: sourcePath)
-            progressHandler("Removing original \(name) directory...")
-            try await removeDirectory(at: symlinkPath)
+            progressHandler("Backing up original \(name) directory...")
+            // Use move (rename) instead of delete to avoid permission issues
+            let backupPath = symlinkPath + ".backup.\(Int(Date().timeIntervalSince1970))"
+            do {
+                try fileManager.moveItem(atPath: symlinkPath, toPath: backupPath)
+            } catch {
+                // If move fails, try removing (might work for some permission scenarios)
+                try await removeDirectory(at: symlinkPath)
+            }
             progressHandler("Creating symlink for \(name)...")
             try createSymlink(from: symlinkPath, to: sourcePath)
 
@@ -143,7 +150,8 @@ public actor SymlinkService {
         var copySucceeded = false
 
         if let rsyncPath = rsyncPath {
-            if await runCommand(rsyncPath, arguments: ["-av", "--progress", source + "/", destination + "/"]) != nil {
+            // Do NOT use --progress as it fills the pipe buffer and causes deadlock if not read continuously
+            if await runCommand(rsyncPath, arguments: ["-a", "--partial", source + "/", destination + "/"]) != nil {
                 copySucceeded = true
             }
         }
@@ -253,9 +261,20 @@ public actor SymlinkService {
         let pathType = await driveProvider.getPathType(for: path)
         if case .symlink = pathType {
             var isDirectory: ObjCBool = false
+            // Check if broken (or pointing to unmounted drive)
             if !fileManager.fileExists(atPath: path, isDirectory: &isDirectory) {
+                // Remove the broken symlink
                 try? fileManager.removeItem(atPath: path)
-                try? fileManager.createDirectory(atPath: path, withIntermediateDirectories: true)
+                
+                // Check for offline cache
+                let offlinePath = PathHelper.lmStudioBasePath + "/offline-models"
+                // Only fallback for models path, hub path gets empty dir for now
+                if path.hasSuffix("/models") && fileManager.fileExists(atPath: offlinePath) {
+                    try? createSymlink(from: path, to: offlinePath)
+                } else {
+                    // Fallback to empty directory
+                    try? fileManager.createDirectory(atPath: path, withIntermediateDirectories: true)
+                }
             }
         }
     }
@@ -266,21 +285,29 @@ public actor SymlinkService {
         await withCheckedContinuation { continuation in
             let process = Process()
             let pipe = Pipe()
+            
             process.executableURL = URL(fileURLWithPath: command)
             process.arguments = arguments
             process.standardOutput = pipe
             process.standardError = pipe
+            
             var env = ProcessInfo.processInfo.environment
+            // Ensure /usr/bin is in PATH (rsync usually there or /usr/local/bin)
             let pathEnv = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
             if !pathEnv.contains("/usr/bin") {
                 env["PATH"] = "/usr/bin:/bin:" + pathEnv
             }
             process.environment = env
+            
             do {
                 try process.run()
-                process.waitUntilExit()
+                
+                // Read data continuously to prevent blocking
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                process.waitUntilExit()
+                
                 let output = String(data: data, encoding: .utf8)
+                
                 if process.terminationStatus == 0 {
                     continuation.resume(returning: output)
                 } else {

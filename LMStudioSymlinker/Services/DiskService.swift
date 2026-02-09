@@ -239,7 +239,7 @@ actor DiskService: DriveProviding {
             let totalSize = attrs[.systemSize] as? Int64 ?? 0
             let freeSize = attrs[.systemFreeSize] as? Int64 ?? 0
             let usedSize = totalSize - freeSize
-
+            
             return StorageInfo(
                 totalSize: formatBytes(totalSize),
                 usedSize: formatBytes(usedSize),
@@ -302,10 +302,11 @@ actor DiskService: DriveProviding {
 
     // MARK: - Shell Command Helper
 
-    private func runCommand(_ command: String, arguments: [String]) async -> String? {
+    nonisolated private func runCommand(_ command: String, arguments: [String]) async -> String? {
         await withCheckedContinuation { continuation in
             let process = Process()
             let outPipe = Pipe()
+            // We don't need stderr for these simple commands usually, but good practice to drain it
             let errPipe = Pipe()
 
             process.executableURL = URL(fileURLWithPath: command)
@@ -315,11 +316,19 @@ actor DiskService: DriveProviding {
 
             do {
                 try process.run()
+                
+                // Read data in background to prevent blocking deeply
+                let outHandle = outPipe.fileHandleForReading
+                let data = outHandle.readDataToEndOfFile()
+                
                 process.waitUntilExit()
 
-                let data = outPipe.fileHandleForReading.readDataToEndOfFile()
-                let output = String(data: data, encoding: .utf8)
-                continuation.resume(returning: output)
+                if process.terminationStatus == 0 {
+                     let output = String(data: data, encoding: .utf8)
+                     continuation.resume(returning: output)
+                } else {
+                     continuation.resume(returning: nil)
+                }
             } catch {
                 continuation.resume(returning: nil)
             }
