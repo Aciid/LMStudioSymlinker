@@ -183,8 +183,14 @@ actor LaunchAgentService: SystemServiceInstalling {
                 rm "$symlink"
                 log "[$name] Removed old symlink (was -> $current_target)"
             elif [[ -d "$symlink" ]]; then
-                mv "$symlink" "${symlink}_backup_$(date +%s)"
-                log "[$name] Backed up existing directory"
+                # Check if directory is empty
+                if [[ -z "$(ls -A "$symlink")" ]]; then
+                    rmdir "$symlink"
+                    log "[$name] Removed empty directory"
+                else
+                    mv "$symlink" "${symlink}_backup_$(date +%s)"
+                    log "[$name] Backed up existing directory"
+                fi
             fi
 
             mkdir -p "$(dirname "$symlink")"
@@ -195,12 +201,54 @@ actor LaunchAgentService: SystemServiceInstalling {
         remove_symlink() {
             local symlink="$1"
             local name="$2"
+            local offline_models="$HOME/.lmstudio/offline-models"
+            local offline_hub="$HOME/.lmstudio/offline-hub"
 
             if [[ -L "$symlink" ]]; then
+                # Check where it currently points
+                local current_target
+                current_target=$(readlink "$symlink" 2>/dev/null)
+
+                # Determine desired target
+                local desired_target=""
+                if [[ "$name" == "models" && -d "$offline_models" ]]; then
+                    desired_target="$offline_models"
+                elif [[ "$name" == "hub" && -d "$offline_hub" ]]; then
+                    desired_target="$offline_hub"
+                fi
+
+                # If it already points to the desired target (if one exists), we are good
+                if [[ -n "$desired_target" && "$current_target" == "$desired_target" ]]; then
+                    log "[$name] Already linked to offline backup: $symlink -> $desired_target"
+                    return 0
+                fi
+                
                 rm "$symlink"
-                log "[$name] Removed broken symlink"
-                mkdir -p "$symlink"
-                log "[$name] Created empty placeholder directory"
+                log "[$name] Removed broken/old symlink (was -> $current_target)"
+                
+                if [[ -n "$desired_target" ]]; then
+                    ln -s "$desired_target" "$symlink"
+                    log "[$name] Linked to offline backup at $desired_target"
+                else
+                    mkdir -p "$symlink"
+                    log "[$name] Created empty placeholder directory"
+                fi
+            elif [[ ! -e "$symlink" ]]; then
+                 # Path doesn't exist, create what we need
+                 local desired_target=""
+                 if [[ "$name" == "models" && -d "$offline_models" ]]; then
+                    desired_target="$offline_models"
+                 elif [[ "$name" == "hub" && -d "$offline_hub" ]]; then
+                    desired_target="$offline_hub"
+                 fi
+
+                 if [[ -n "$desired_target" ]]; then
+                    ln -s "$desired_target" "$symlink"
+                    log "[$name] Linked to offline backup at $desired_target"
+                 else
+                    mkdir -p "$symlink"
+                    log "[$name] Created empty placeholder directory"
+                 fi
             fi
         }
 
