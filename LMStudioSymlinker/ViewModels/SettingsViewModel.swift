@@ -196,8 +196,10 @@ final class SettingsViewModel {
             return
         }
 
-        if let usage = await driveProvider.getStorageUsage(for: drive.path) {
-            targetDiskStorageUsage = usage
+        if let storageInfo = await driveProvider.getVolumeStorageInfo(for: drive.path) {
+            targetDiskStorageUsage = "\(storageInfo.usedSize) used / \(storageInfo.totalSize)"
+        } else {
+            targetDiskStorageUsage = "Unknown"
         }
 
         let modelsPath = driveProvider.modelsSymlinkPath
