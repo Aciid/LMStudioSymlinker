@@ -15,7 +15,8 @@ public enum PathType: Equatable, Sendable {
     case doesNotExist
 }
 
-public struct DriveInfo: Equatable, Sendable {
+public struct DriveInfo: Equatable, Sendable, Identifiable {
+    public var id: String { uuid }
     public let path: String
     public let name: String
     public let uuid: String
