@@ -41,6 +41,9 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, minHeight: 400)
         }
         .frame(minWidth: 500, minHeight: 650)
+        .task {
+            await viewModel.loadInitialData()
+        }
         .alert("Error", isPresented: $viewModel.showError) {
             Button("OK") {}
         } message: {
