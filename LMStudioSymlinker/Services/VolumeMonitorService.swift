@@ -11,8 +11,8 @@ final class VolumeMonitorService: VolumeMonitoring {
     private var session: DASession?
     private var isMonitoring = false
 
-    var onVolumeMount: ((String) -> Void)?
-    var onVolumeUnmount: ((String) -> Void)?
+    var onVolumeMount: (@Sendable (String) -> Void)?
+    var onVolumeUnmount: (@Sendable (String) -> Void)?
 
     private init() {}
 
@@ -35,7 +35,9 @@ final class VolumeMonitorService: VolumeMonitoring {
             { disk, context in
                 guard let context else { return }
                 let service = Unmanaged<VolumeMonitorService>.fromOpaque(context).takeUnretainedValue()
-                service.handleDiskAppeared(disk)
+                Task { @MainActor in
+                    service.handleDiskAppeared(disk)
+                }
             },
             Unmanaged.passUnretained(self).toOpaque()
         )
@@ -47,7 +49,9 @@ final class VolumeMonitorService: VolumeMonitoring {
             { disk, context in
                 guard let context else { return }
                 let service = Unmanaged<VolumeMonitorService>.fromOpaque(context).takeUnretainedValue()
-                service.handleDiskDisappeared(disk)
+                Task { @MainActor in
+                    service.handleDiskDisappeared(disk)
+                }
             },
             Unmanaged.passUnretained(self).toOpaque()
         )

@@ -10,21 +10,14 @@ final class LoginItemService {
     private init() {}
 
     var isEnabled: Bool {
-        if #available(macOS 13.0, *) {
-            return SMAppService.mainApp.status == .enabled
-        } else {
-            // Fallback for older macOS versions
-            return false
-        }
+        SMAppService.mainApp.status == .enabled
     }
 
     func setEnabled(_ enabled: Bool) throws {
-        if #available(macOS 13.0, *) {
-            if enabled {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
+        if enabled {
+            try SMAppService.mainApp.register()
+        } else {
+            try SMAppService.mainApp.unregister()
         }
     }
 

@@ -57,14 +57,11 @@ actor DiskService: DriveProviding {
     private func isSystemVolume(volumeName: String, volumePath: String) -> Bool {
         // Skip Macintosh HD and system volumes
         let systemVolumeNames = [
-            "Macintosh HD",
-            "Macintosh HD - Data",
             "macintosh hd",
             "macintosh hd - data"
         ]
 
-        if systemVolumeNames.contains(volumeName.lowercased()) ||
-           systemVolumeNames.contains(volumeName) {
+        if systemVolumeNames.contains(volumeName.lowercased()) {
             return true
         }
 
@@ -304,24 +301,21 @@ actor DiskService: DriveProviding {
 
     private func runCommand(_ command: String, arguments: [String]) async -> String? {
         await withCheckedContinuation { continuation in
-            let process = Process()
-            let outPipe = Pipe()
-            let errPipe = Pipe()
-
-            process.executableURL = URL(fileURLWithPath: command)
-            process.arguments = arguments
-            process.standardOutput = outPipe
-            process.standardError = errPipe
-
-            do {
-                try process.run()
-                process.waitUntilExit()
-
-                let data = outPipe.fileHandleForReading.readDataToEndOfFile()
-                let output = String(data: data, encoding: .utf8)
-                continuation.resume(returning: output)
-            } catch {
-                continuation.resume(returning: nil)
+            DispatchQueue.global().async {
+                let process = Process()
+                let outPipe = Pipe()
+                process.executableURL = URL(fileURLWithPath: command)
+                process.arguments = arguments
+                process.standardOutput = outPipe
+                process.standardError = Pipe()
+                do {
+                    try process.run()
+                    let data = outPipe.fileHandleForReading.readDataToEndOfFile()
+                    process.waitUntilExit()
+                    continuation.resume(returning: String(data: data, encoding: .utf8))
+                } catch {
+                    continuation.resume(returning: nil)
+                }
             }
         }
     }

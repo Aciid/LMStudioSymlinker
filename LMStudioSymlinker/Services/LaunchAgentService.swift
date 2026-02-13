@@ -112,17 +112,23 @@ actor LaunchAgentService: SystemServiceInstalling {
 
         let script = "do shell script \"\(shellCommand.replacingOccurrences(of: "\"", with: "\\\""))\" with administrator privileges"
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", script]
+        let terminationStatus: Int32 = await withCheckedContinuation { continuation in
+            DispatchQueue.global().async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+                process.arguments = ["-e", script]
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    continuation.resume(returning: process.terminationStatus)
+                } catch {
+                    continuation.resume(returning: -1)
+                }
+            }
+        }
 
-        try process.run()
-        process.waitUntilExit()
-
-        if process.terminationStatus != 0 {
-            throw NSError(domain: "LaunchAgentService", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "Failed to install scripts (password may have been cancelled or an error occurred)."
-            ])
+        if terminationStatus != 0 {
+            throw SymlinkService.SymlinkError.copyFailed("Failed to install scripts via osascript")
         }
     }
 
@@ -140,13 +146,13 @@ actor LaunchAgentService: SystemServiceInstalling {
         # /usr/local/bin/lmstudio-symlink-manager.sh
         # Manages LM Studio symlinks based on external drive mount status
 
-        VOLUME_UUID="\(volumeUUID)"
-        VOLUME_PATH="\(volumePath)"
-        SYMLINK_PATH_MODELS="\(modelsSymlinkPath)"
-        SOURCE_PATH_MODELS="\(sourceModelsPath)"
-        SYMLINK_PATH_HUB="\(hubSymlinkPath)"
-        SOURCE_PATH_HUB="\(sourceHubPath)"
-        LOG="\(logPath)"
+        VOLUME_UUID=\(shellEscape(volumeUUID))
+        VOLUME_PATH=\(shellEscape(volumePath))
+        SYMLINK_PATH_MODELS=\(shellEscape(modelsSymlinkPath))
+        SOURCE_PATH_MODELS=\(shellEscape(sourceModelsPath))
+        SYMLINK_PATH_HUB=\(shellEscape(hubSymlinkPath))
+        SOURCE_PATH_HUB=\(shellEscape(sourceHubPath))
+        LOG=\(shellEscape(logPath))
 
         log() {
             echo "$(date): $1" >> "$LOG"
@@ -433,12 +439,26 @@ actor LaunchAgentService: SystemServiceInstalling {
     }
 
     private func runInitialCheck() async throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["\(scriptsPath)/lmstudio-symlink-manager.sh"]
+        let path = "\(scriptsPath)/lmstudio-symlink-manager.sh"
+        let terminationStatus: Int32 = await withCheckedContinuation { continuation in
+            DispatchQueue.global().async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+                process.arguments = [path]
 
-        try process.run()
-        process.waitUntilExit()
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    continuation.resume(returning: process.terminationStatus)
+                } catch {
+                    continuation.resume(returning: -1)
+                }
+            }
+        }
+
+        if terminationStatus != 0 {
+            throw SymlinkService.SymlinkError.copyFailed("Failed to install scripts via osascript")
+        }
     }
 
     // MARK: - Uninstallation
@@ -557,4 +577,8 @@ actor LaunchAgentService: SystemServiceInstalling {
     public func getStatus() async -> [String: Bool] {
         await getServiceStatus()
     }
+}
+
+private func shellEscape(_ s: String) -> String {
+    "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
 }

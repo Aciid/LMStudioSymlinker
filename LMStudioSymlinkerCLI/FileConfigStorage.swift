@@ -3,7 +3,7 @@ import Foundation
 import LMStudioSymlinkerCore
 
 /// ConfigStorage implementation using a JSON file under XDG_CONFIG_HOME.
-public final class FileConfigStorage: ConfigStorage, @unchecked Sendable {
+public actor FileConfigStorage: ConfigStorage {
     private let fileURL: URL
     private let fileManager = FileManager.default
 
