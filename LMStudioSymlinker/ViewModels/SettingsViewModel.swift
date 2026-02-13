@@ -2,7 +2,6 @@
 
 import Foundation
 import SwiftUI
-import Combine
 import LMStudioSymlinkerCore
 
 @MainActor
@@ -67,14 +66,16 @@ final class SettingsViewModel {
         self.driveProvider = driveProvider
         self.symlinkService = symlinkService
         self.systemService = systemService
-        Task {
-            await loadSavedConfiguration()
-            await refreshDriveList()
-            await updateStorageInfo()
-            await checkSymlinkStatus()
-            await checkServiceStatus()
-            await loadLoginItemStatus()
-        }
+    }
+
+    /// Loads initial data. Call from a SwiftUI `.task {}` modifier so cancellation is automatic.
+    func loadInitialData() async {
+        await loadSavedConfiguration()
+        await refreshDriveList()
+        await updateStorageInfo()
+        await checkSymlinkStatus()
+        await checkServiceStatus()
+        await loadLoginItemStatus()
     }
 
     // MARK: - Configuration
