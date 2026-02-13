@@ -5,8 +5,8 @@ import LMStudioSymlinkerCore
 /// VolumeMonitoring for Linux: polls /proc/mounts and invokes callbacks when selected path appears/disappears.
 @MainActor
 public final class LinuxVolumeMonitor: VolumeMonitoring {
-    public var onVolumeMount: ((String) -> Void)?
-    public var onVolumeUnmount: ((String) -> Void)?
+    public var onVolumeMount: (@Sendable (String) -> Void)?
+    public var onVolumeUnmount: (@Sendable (String) -> Void)?
 
     private var pollTask: Task<Void, Never>?
     private var lastMounts: Set<String> = []
