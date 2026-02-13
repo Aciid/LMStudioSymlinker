@@ -98,7 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupSettingsWindowNotifications() {
-        NotificationCenter.default.addObserver(
+        windowObserver = NotificationCenter.default.addObserver(
             forName: .settingsWindowShouldBecomeKey,
             object: nil,
             queue: .main
@@ -107,6 +107,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.settingsWindow?.makeKeyAndOrderFront(nil)
                 NSApp.activate(ignoringOtherApps: true)
             }
+        }
+    }
+
+    nonisolated(unsafe) private var windowObserver: Any?
+
+    deinit {
+        if let observer = windowObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 
